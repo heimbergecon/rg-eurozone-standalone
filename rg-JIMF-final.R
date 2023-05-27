@@ -162,27 +162,6 @@ text(-9, 0.1, "median = 0.24", col="green")
 #      col="darkblue", lwd=2, lty=2, add=TRUE, yaxt="n")
 density(partialvector, na.rm=TRUE)
 
-#There is very little deviation of the sample distribution from the theoretical bell curve distribution (dotted blue line).
-
-#test for normal distribution
-qqnorm(dat$rminusg, pch = 1, frame = FALSE, na.rm=TRUE)
-qqline(dat$rminusg, col = "steelblue", lwd = 2, na.rm=TRUE)
-qqPlot(dat$rminusg)
-
-#Shapiro-Wilk's method 
-#if p<0.1, we can reject the assumption of normality
-shapiro.test(dat$rminusg)
-#For larger samples (i.e. more than one hundred), the normality tests are overly conservative and the assumption of normality might be rejected too easily (see robust exceptions below).
-#An issue with the Shapiro-Wilk's test is that when you feed it more data, the chances of the null hypothesis being rejected becomes larger.
-#So what happens is that for large amounts of data even very small deviations from normality can be detected, leading to rejection of the null hypothesis event hough for practical purposes the data is more than normal enough.
-
-#skewness and kurtosis
-skew(dat$rminusg)
-#skewness is a measure of symmetry. As a rule, positive skewness indicates that the mean of the data values is more than the median, and the data distribution is right-skewed.
-#library(moments)
-#kurtosis(dat$rminusg, na.rm=TRUE)
-#the excess kurtosis describes the tail shape of the data distribution. The normal distribution has zero excess kurtosis and thus the standard tail shape. It is said to be mesokurtic. Negative excess kurtosis would indicate a thin-tailed data distribution, and is said to be platykurtic. Positive excess kurtosis would indicate a fat-tailed distribution, and is said to be leptokurtic.
-
 #count r-g observations
 count_rg_observations <- dat %>%
   group_by(ccode) %>% 
@@ -217,36 +196,11 @@ plot_rg_negative <- ggplot(join_rg_obs, aes(x = reorder(ccode, -share_negative_r
   theme(axis.title.y=element_text(size=9))
 plot_rg_negative
 
-#Negative rg-spells and public-debt-to-GDP
-#subset data
-dat_negative_rg <- subset(dat, YNRGepisode %in% c('1'))
-
-#plot negative r-g episodes against public-debt-to-GDP
-library(mgcv)
-plot_pdebt_rgspell <- ggplot(dat_negative_rg,aes(PDebt, lengthRGepisode))+
-  geom_point(col="grey49")+
-  xlab("Public debt in % of GDP") +
-  ylab("Length of negative r-g episode (in years)") +
-  ggtitle("")+
-  theme(axis.line.x = element_line(color="black", size = 0.1),
-        axis.line.y = element_line(color="black", size = 0.1)) +
-  theme(panel.background = element_rect(fill = "white")) +
-  geom_smooth(method=gam, color='black',formula= y ~ s(x, bs = "cs"))
-plot_pdebt_rgspell
-#The regression line is based on a generalised additive model with local smoothing, and the smoothing parameter was selected by using the default method of cross- validation (Wood 2017)
-
-#Question 2: Is the volatility of r-g driven more by changes in r or by changes in g?
-#measuring volatility
-
-#see descriptive plots for r and g
-
 #standard deviation as the traditional measure of volatility (distribution is indeed close to a normal distribution, i.e. standard deviation should be a good measure of volatility)
 sd(dat$rminusg, na.rm=TRUE)
 sd(dat$rgNegative, na.rm=TRUE)
 
-#Question 3
-#What about the role of inflation?
-
+#unit root tests
 dat_UR <- select(dat, ccode, year, rminusg)
 dat_UR <- na.omit (dat_UR)
 dat_UR <- pdata.frame(dat_UR)
@@ -400,10 +354,6 @@ pvals.rg_determinants_v5_3_year <- list(coeftest(rg_determinants_v5_3_year, vcov
 #stargazer table for LaTEX
 stargazer(rg_determinants_v3, rg_determinants_v5, rg_determinants_v9, rg_determinants_v5_3_year, rg_determinants_v6, rg_determinants_v7, rg_determinants_v6_periphery, rg_determinants_v6_core, t=list(unlist(tvals.rg_determinants_v3), unlist(tvals.rg_determinants_v5), unlist(tvals.rg_determinants_v9), unlist(tvals.rg_determinants_v5_3_year), unlist(tvals.rg_determinants_v6), unlist(tvals.rg_determinants_v7), unlist(tvals.rg_determinants_v6_periphery), unlist(tvals.rg_determinants_v6_core)), se=list(unlist(ses.rg_determinants_v3), unlist(ses.rg_determinants_v5), unlist(ses.rg_determinants_v9), unlist(ses.rg_determinants_v5_3_year), unlist(ses.rg_determinants_v6), unlist(ses.rg_determinants_v7), unlist(ses.rg_determinants_v6_periphery), unlist(ses.rg_determinants_v6_core)), p=list(unlist(pvals.rg_determinants_v3), unlist(pvals.rg_determinants_v5), unlist(pvals.rg_determinants_v9), unlist(pvals.rg_determinants_v5_3_year), unlist(pvals.rg_determinants_v6), unlist(pvals.rg_determinants_v7), unlist(pvals.rg_determinants_v6_periphery), unlist(pvals.rg_determinants_v6_core)), type='html', out="output/Table2.htm")
 
-#descriptives
-descriptives <- select(dat, rminusg, PDebt, realLTrate, inflation, pop_growth, primaryFB, fin_open, safety, EuroMember, EuroCrisis, StandaCrisis)
-stargazer(dat_3_year)
-
 #5-year average
 dat_5_year <- dat %>%
   arrange(ccode, year) %>%
@@ -506,8 +456,6 @@ rg_determinants_v9_5_year <- plm(rminusg~ inflation + lag(real_LTrate, 1) + pop_
 summary(rg_determinants_v9_5_year)
 coeftest(rg_determinants_v9_5_year, vcov.=function(x) vcovHC(x, type="sss"))
 
-#
-
 #exclude US
 dat_exclude_US_5_year <- subset(pdata, ccode %in% c('AUT', 'BEL', 'DEU', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
 
@@ -566,8 +514,7 @@ pvals.rg_determinants_v9_5_year <- list(coeftest(rg_determinants_v9_5_year, vcov
 #stargazer table for LaTEX: main regression results
 stargazer(rg_determinants_v3_5_year, rg_determinants_v6_5_year, rg_determinants_v7_5_year, rg_determinants_v6_periphery_5_year, rg_determinants_v6_core_5_year, rg_determinants_v9_5_year, t=list(unlist(tvals.rg_determinants_v3_5_year), unlist(tvals.rg_determinants_v6_5_year), unlist(tvals.rg_determinants_v7_5_year), unlist(tvals.rg_determinants_v6_periphery_5_year), unlist(tvals.rg_determinants_v6_core_5_year), unlist(tvals.rg_determinants_v9_5_year)), se=list(unlist(ses.rg_determinants_v3_5_year), unlist(ses.rg_determinants_v6_5_year), unlist(ses.rg_determinants_v7_5_year), unlist(ses.rg_determinants_v6_periphery_5_year), unlist(ses.rg_determinants_v6_core_5_year), unlist(ses.rg_determinants_v9_5_year)), p=list(unlist(pvals.rg_determinants_v3_5_year), unlist(pvals.rg_determinants_v6_5_year), unlist(pvals.rg_determinants_v7_5_year), unlist(pvals.rg_determinants_v6_periphery_5_year), unlist(pvals.rg_determinants_v6_core_5_year), unlist(pvals.rg_determinants_v9_5_year)))
 
-#Question 4: What is the Probability of future 5-year r-g  > 0 in the future?
-#positive average five-year ahead r-g
+#positive average ahead r-g
 dat$rg_positive_3year <- ifelse(dat$rminusg_future3>0, 1, 0)
 dat$rg_positive_5year <- ifelse(dat$rminusg_future5>0, 1, 0)
 dat$rg_positive_10year <- ifelse(dat$rminusg_future10>0, 1, 0)
@@ -1476,71 +1423,11 @@ summary(probit_Euro_PDebt_periphery)
 probit_Euro_PDebt_core<- glm(rg_positive_3year ~ inflation + real_LTrate + pop_growth + PDebt + primaryFB + fin_open + safety, family=binomial(link="probit"), data=dat_Euro_core)
 summary(probit_Euro_PDebt_core)
 
-#preparations for stargazer table
-ses.probit_allcountries <- list(coeftest(probit_allcountries, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_allcountries <- list(coeftest(probit_allcountries, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_allcountries <- list(coeftest(probit_allcountries, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_Euro <- list(coeftest(probit_Euro, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_Euro <- list(coeftest(probit_Euro, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_Euro <- list(coeftest(probit_Euro, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_standalone <- list(coeftest(probit_standalone, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_standalone <- list(coeftest(probit_standalone, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_standalone <- list(coeftest(probit_standalone, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_allcountries_PDebt<- list(coeftest(probit_allcountries_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_allcountries_PDebt <- list(coeftest(probit_allcountries_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_allcountries_PDebt <- list(coeftest(probit_allcountries_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_Euro_PDebt <- list(coeftest(probit_Euro_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_Euro_PDebt <- list(coeftest(probit_Euro_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_Euro_PDebt <- list(coeftest(probit_Euro_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_Euro_PDebt_periphery <- list(coeftest(probit_Euro_PDebt_periphery, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_Euro_PDebt_periphery <- list(coeftest(probit_Euro_PDebt_periphery, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_Euro_PDebt_periphery <- list(coeftest(probit_Euro_PDebt_periphery, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_Euro_PDebt_core <- list(coeftest(probit_Euro_PDebt_core, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_Euro_PDebt_core <- list(coeftest(probit_Euro_PDebt_core, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_Euro_PDebt_core <- list(coeftest(probit_Euro_PDebt_core, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-ses.probit_standalone_PDebt <- list(coeftest(probit_standalone_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,2]) #heteroskedasticity-robust standard errors
-tvals.probit_standalone_PDebt <- list(coeftest(probit_standalone_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.probit_standalone_PDebt <- list(coeftest(probit_standalone_PDebt, vcov.=function(x) vcovHC(x, type="HC1"))[,4]) # heteroskedasticity-robust p-val
-
-#Table A8
-#stargazer table
-stargazer(probit_allcountries_PDebt, probit_Euro_PDebt, probit_standalone_PDebt, probit_Euro_PDebt_periphery, probit_Euro_PDebt_core, t=list(unlist(tvals.probit_allcountries_PDebt), unlist(tvals.probit_Euro_PDebt), unlist(tvals.probit_standalone_PDebt), unlist(tvals.probit_Euro_PDebt_periphery), unlist(tvals.probit_Euro_PDebt_core)), se=list(unlist(ses.probit_allcountries_PDebt), unlist(ses.probit_Euro_PDebt), unlist(ses.probit_standalone_PDebt), unlist(ses.probit_Euro_PDebt_periphery), unlist(ses.probit_Euro_PDebt_core)), p=list(unlist(pvals.probit_allcountries_PDebt), unlist(pvals.probit_Euro_PDebt), unlist(pvals.probit_standalone_PDebt), unlist(pvals.probit_Euro_PDebt_periphery), unlist(pvals.probit_Euro_PDebt_core)))
-
-#stargazer(probit_allcountries_PDebt, probit_Euro_PDebt, probit_standalone_PDebt, probit_allcountries, probit_Euro, probit_standalone, t=list(unlist(tvals.probit_allcountries_PDebt), unlist(tvals.probit_Euro_PDebt), unlist(tvals.probit_standalone_PDebt), unlist(tvals.probit_allcountries), unlist(tvals.probit_Euro), unlist(tvals.probit_standalone)), se=list(unlist(ses.probit_allcountries_PDebt), unlist(ses.probit_Euro_PDebt), unlist(ses.probit_standalone_PDebt), unlist(ses.probit_allcountries), unlist(ses.probit_Euro), unlist(ses.probit_standalone)), p=list(unlist(pvals.probit_allcountries_PDebt), unlist(pvals.probit_Euro_PDebt), unlist(pvals.probit_standalone_PDebt), unlist(pvals.probit_allcountries), unlist(pvals.probit_Euro), unlist(pvals.probit_standalone)))
-
 #setting initial conditions for estimating predicted probabilities
 allmean_allcountries <- data.frame(EuroMember=rep(1,4), EuroCrisis=rep(1,4), StandaCrisis=rep(1,4), real_GDP_gr=dat_mean_real_GDP_gr_quartile$Mean_real_GDP_gr_quartile, pop_growth=dat_mean_pop_growth_quartile$Mean_pop_growth_quartile, primaryFB=dat_mean_primaryFB_quartile$Mean_primaryFB_quartile, fin_open=dat_mean_fin_open_quartile$Mean_fin_open_quartile, NFA=dat_mean_NFA_quartile$Mean_NFA_quartile, real_LTrate=dat_mean_real_LTrate_quartile$Mean_real_LTrate_quartile, safety=dat_mean_safety_quartile$Mean_safety_quartile, PDebt_quartile=as.factor(c("Q1","Q2","Q3","Q4")))
 
 #bind data frame with predicted probabilities and standard errors
 allmean_probit_allcountries <- cbind(allmean_allcountries, predict(probit_allcountries, newdata=allmean_allcountries, type="response", se.fit=TRUE))
-
-#plot allcountries
-#probit
-boxplot_probit_allcountries <- ggplot(allmean_probit_allcountries,aes(x=PDebt_quartile, y=fit))+
-  geom_point() +
-  geom_errorbar(aes(ymin=fit-se.fit, ymax=fit+se.fit), width=.2,
-                position=position_dodge(.9), col="red")+
-  xlab("Public-debt-to-GDP quartile") +
-  ylab("Probability of 5-year future r-g  > 0") +
-  ggtitle("Probabilities of 5-year future r - g > 0\n in different public debt groups (22 OECD countries)")+
-  theme(axis.line.x = element_line(color="black", size = 0.1),
-        axis.line.y = element_line(color="black", size = 0.1)) +
-  theme(panel.background = element_rect(fill = "white"))
-boxplot_probit_allcountries
-
-#Euro
-#setting initial conditions for estimating predicted probabilities
-allmean_Euro <- data.frame(EuroMember=rep(1,4), EuroCrisis=rep(1,4), StandaCrisis=rep(1,4), real_GDP_gr=dat_mean_real_GDP_gr_quartile$Mean_real_GDP_gr_quartile, pop_growth=dat_mean_pop_growth_quartile$Mean_pop_growth_quartile, primaryFB=dat_mean_primaryFB_quartile$Mean_primaryFB_quartile, fin_open=dat_mean_fin_open_quartile$Mean_fin_open_quartile, NFA=dat_mean_NFA_quartile$Mean_NFA_quartile, real_LTrate=dat_mean_real_LTrate_quartile$Mean_real_LTrate_quartile, safety=dat_mean_safety_quartile$Mean_safety_quartile, PDebt_quartile=as.factor(c("Q1","Q2","Q3","Q4")))
-
-#bind data frame with predicted probabilities and standard errors
-allmean_probit_Euro <- cbind(allmean_Euro, predict(probit_Euro, newdata=allmean_Euro, type="response", se.fit=TRUE))
 
 #single-country predictions
 dat_2018<-subset(dat, year %in% c('2018'))
@@ -1701,19 +1588,7 @@ allmean_probit_all_2016_2018_levels_merged$ccode = factor(allmean_probit_all_201
 #using 2018 public debt and population growth numbers
 #probit
 
-#2018 levels
-boxplot_probit_all_2018_levels <- ggplot(allmean_probit_all_2018_levels_merged, aes(ccode, fit))+
-  geom_point() +
-  geom_errorbar(aes(ymin=fit-se.fit, ymax=fit+se.fit), width=.2,
-                position=position_dodge(.9), col="red")+
-  xlab("Country") +
-  ylab("Probability of 5-year future r-g>0") +
-  ggtitle("Predicted probabilities for individual countries\n holding control variables at 2018 values")+
-  theme(axis.line.x = element_line(color="black", size = 0.1),
-        axis.line.y = element_line(color="black", size = 0.1)) +
-  theme(panel.background = element_rect(fill = "white"))
-boxplot_probit_all_2018_levels
-
+#Predicted probabilities: results from Figure 4
 #2009-2018 levels
 boxplot_probit_all_2009_2018_levels <- ggplot(allmean_probit_all_2009_2018_levels_merged, aes(ccode, fit))+
   geom_point() +
@@ -1740,21 +1615,7 @@ boxplot_probit_all_2016_2018_levels <- ggplot(allmean_probit_all_2016_2018_level
   theme(panel.background = element_rect(fill = "white"))
 boxplot_probit_all_2016_2018_levels
 
-#mean values
-boxplot_probit_all_mean_levels <- ggplot(allmean_probit_all_mean_levels_merged, aes(ccode, fit))+
-  geom_point() +
-  geom_errorbar(aes(ymin=fit-se.fit, ymax=fit+se.fit), width=.2,
-                position=position_dodge(.9), col="red")+
-  xlab("Country") +
-  ylab("Probability of 3-year future r-g>0") +
-  ggtitle("Predicted probabilities for individual countries\n holding control variables at mean values")+
-  theme(axis.line.x = element_line(color="black", size = 0.1),
-        axis.line.y = element_line(color="black", size = 0.1)) +
-  theme(panel.background = element_rect(fill = "white"))
-boxplot_probit_all_mean_levels
-
-#Question 5: Are the r-g risks related to running expansionary fiscal policy increasing with the level of public debt?
-#quantile regression with covariates
+#Quantile regressions
 #all countries
 #Q10
 qr_q10_allcountries <- rq(rminusg_future3~inflation + real_LTrate + pop_growth + PDebt + primaryFB + fin_open + safety, data=dat, tau = 0.1)
@@ -1772,6 +1633,7 @@ dat$model_Q10_allcountries <- stats::predict(qr_q10_allcountries, newdata=dat)
 dat$model_Q50_allcountries <- stats::predict(qr_q50_allcountries, newdata=dat)
 dat$model_Q90_allcountries <- stats::predict(qr_q90_allcountries, newdata=dat)
 
+#Results from figure 3
 plot_5year_rg_pdebt_multivariate_allcountries <- ggplot(dat,aes(PDebt,rminusg_future5,colour=factor(Eurozone)))+
   geom_point()+
   geom_smooth(method="lm", data=dat, aes(x=PDebt, y=model_Q10_allcountries, linetype="dotted"), 
@@ -2061,148 +1923,6 @@ plot_5year_rg_pdebt_multivariate_standalone_safety <- ggplot(dat_standalone,aes(
   scale_color_manual(labels = c("No"), values = c("grey49"))
 plot_5year_rg_pdebt_multivariate_standalone_safety
 
-library(ggpubr)
-fig_quantiles <- ggpubr::ggarrange(
-  plot_5year_rg_pdebt_multivariate_allcountries, plot_5year_rg_pdebt_multivariate_allcountries_safety, plot_5year_rg_pdebt_multivariate_Euro, plot_5year_rg_pdebt_multivariate_Euro_safety, plot_5year_rg_pdebt_multivariate_standalone, plot_5year_rg_pdebt_multivariate_standalone_safety, ncol = 2, nrow=3, labels = c("A)", "B)", "C)", "D)", "E)", "F)"), 
-  common.legend = FALSE, legend = "bottom")
-fig_quantiles
-
-###
-#exclude Euro Crisis years 2008-2015
-#dat_exclude_EuroCrisis <- subset(dat_Euro, EuroCrisis20082015 %in% c('0'))
-dat_exclude_EuroCrisis <- subset(dat_Euro, year %in% c('1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006', '2007'))
-
-qr_q10_Euro_excludeEuroCrisis <- rq(rminusg_future5~real_GDP_gr + real_LTrate + pop_growth + PDebt + primaryFB + fin_open, data=dat_exclude_EuroCrisis, tau = 0.1)
-summary(qr_q10_Euro_excludeEuroCrisis)
-
-#Q50
-qr_q50_Euro_excludeEuroCrisis <- rq(rminusg_future5~real_GDP_gr + real_LTrate + pop_growth + PDebt + primaryFB + fin_open, data=dat_exclude_EuroCrisis, tau = 0.5)
-summary(qr_q50_Euro_excludeEuroCrisis)
-
-#Q90
-qr_q90_Euro_excludeEuroCrisis <- rq(rminusg_future5~real_GDP_gr + real_LTrate + pop_growth + PDebt + primaryFB + fin_open, data=dat_exclude_EuroCrisis, tau = 0.9)
-summary(qr_q90_Euro_excludeEuroCrisis)
-
-#
-
-dat_exclude_EuroCrisis$model_Q10_Euro_excludeEuroCrisis <- stats::predict(qr_q10_Euro_excludeEuroCrisis, newdata=dat_exclude_EuroCrisis)
-dat_exclude_EuroCrisis$model_Q50_Euro_excludeEuroCrisis <- stats::predict(qr_q50_Euro_excludeEuroCrisis, newdata=dat_exclude_EuroCrisis)
-dat_exclude_EuroCrisis$model_Q90_Euro_excludeEuroCrisis <- stats::predict(qr_q90_Euro_excludeEuroCrisis, newdata=dat_exclude_EuroCrisis)
-
-plot_5year_rg_pdebt_multivariate_Euro_excludeEuroCrisis <- ggplot(dat_exclude_EuroCrisis,aes(PDebt,rminusg_future5,colour=factor(Post2007)))+
-  geom_point()+
-  geom_smooth(method="lm", data=dat_exclude_EuroCrisis, aes(x=PDebt, y=model_Q10_Euro_excludeEuroCrisis, linetype="dotted"), 
-              colour = "slateblue2", se = F, stat = "smooth", size=0.5) +
-  geom_smooth(method="lm", data=dat_exclude_EuroCrisis, aes(x=PDebt, y=model_Q50_Euro_excludeEuroCrisis, linetype="dashed"), 
-              colour = "slateblue2", se = F, stat = "smooth", size=0.5) +
-  geom_smooth(method="lm", data=dat_exclude_EuroCrisis, aes(x=PDebt, y=model_Q90_Euro_excludeEuroCrisis, linetype="solid"),
-              colour = "slateblue2", se = F, stat = "smooth", size=0.5) +
-  scale_linetype_manual(values=c("dotted", "dashed", "solid"), labels=c("Q50", "Q10", "Q90"))+
-  labs(linetype = "Quantile")+
-  xlab("Public debt in % of GDP") +
-  ylab("Predicted 5-year future r - g (in ppts.)") +
-  ggtitle("11 Eurozone countries (post-2007 excluded)")+
-  theme(axis.line.x = element_line(color="black", size = 0.1),
-        axis.line.y = element_line(color="black", size = 0.1)) +
-  labs(color='Post-2007') +
-  scale_color_manual(labels = c("No", "Yes"), values = c("sandybrown", "grey49")) +
-  theme(panel.background = element_rect(fill = "white"))
-plot_5year_rg_pdebt_multivariate_Euro_excludeEuroCrisis
-
-#grid-plots
-
-library(ggpubr)
-fig_Euro_standalone <- ggpubr::ggarrange(
-  plot_5year_rg_pdebt_multivariate_Euro, plot_5year_rg_pdebt_multivariate_standalone, ncol = 2, labels = c("A)", "B)"), 
-  common.legend = TRUE, legend = "bottom")
-fig_Euro_standalone
-
-fig_allcountries_Euro_standalone_Euroexclude <- ggpubr::ggarrange(
-  plot_5year_rg_pdebt_multivariate_allcountries, plot_5year_rg_pdebt_multivariate_Euro, plot_5year_rg_pdebt_multivariate_standalone, plot_5year_rg_pdebt_multivariate_Euro_excludeEuroCrisis, ncol = 2, nrow=2, labels = c("A)", "B)", "C)"), 
-  common.legend = TRUE, legend = "bottom")
-fig_allcountries_Euro_standalone_Euroexclude
-
-fig_quantiles_groups <- ggpubr::ggarrange(
-  plot_5year_rg_pdebt_multivariate_allcountries, plot_5year_rg_pdebt_multivariate_Euro, plot_5year_rg_pdebt_multivariate_standalone, plot_5year_rg_pdebt_multivariate_Euro_periphery, plot_5year_rg_pdebt_multivariate_Euro_core,  ncol = 2, nrow=3, labels = c("A)", "B)", "C)", "D)", "E)"), 
-  common.legend = TRUE, legend = "bottom")
-fig_allcountries_Euro_standalone_Euroexclude
-
-library(ggpubr)
-fig_Euro_Euroexclude <- ggpubr::ggarrange(
-  plot_5year_rg_pdebt_multivariate_Euro, plot_5year_rg_pdebt_multivariate_Euro_excludeEuroCrisis, ncol = 2, labels = c("A)", "B)"), 
-  common.legend = TRUE, legend = "bottom")
-fig_Euro_Euroexclude
-
-#A higher public-debt-to-GDP ratio is not associated with higher future r-g. For the 90th quantile, the regression line is even downward sloping.
-
-#Question 6: Are episodes of negative r-g on average shorter when the initial public-debt-to-GDP ratio is higher?
-rglength_v1 <- lm(lengthRGepisode~InitialPDebtRGepisode, data=dat_rg_episodes)
-summary(rglength_v1)
-
-clubSandwich::coef_test(rglength_v1, vcov = "CR0", 
-                        cluster = dat_rg_episodes$ccode, test = "naive-t")
-
-#with country-fixed effects
-rglength_v2 <- plm(lengthRGepisode~InitialPDebtRGepisode, index=c("ccode", "year"), model="within", effect="individual", data=dat_rg_episodes)
-summary(rglength_v2)
-coeftest(rglength_v2, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(rglength_v2, vcov = "CR0", 
-                        cluster = dat_rg_episodes$ccode, test = "naive-t")
-
-#with time-fixed effects
-rglength_v3 <- plm(lengthRGepisode~InitialPDebtRGepisode, index=c("ccode", "year"), model="within", effect="time", data=dat_rg_episodes)
-summary(rglength_v3)
-coeftest(rglength_v3, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(rglength_v3, vcov = "CR0", 
-                        cluster = dat_rg_episodes$ccode, test = "naive-t")
-
-#with country- and time-fixed effects
-rglength_v4 <- plm(lengthRGepisode~InitialPDebtRGepisode, index=c("ccode", "year"), model="within", effect="twoways", data=dat_rg_episodes)
-summary(rglength_v4)
-coeftest(rglength_v4, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(rglength_v4, vcov = "CR0", 
-                        cluster = dat_rg_episodes$ccode, test = "naive-t")
-
-#Question 7: How are interest-growth differentials related to the fiscal stance?
-#with country-fixed effects
-fiscalstance_v1 <- plm(primaryFB~lag(PDebt,1) + rminusg + outputgap, index=c("ccode", "year"), model="within", effect="individual", data=dat)
-summary(fiscalstance_v1)
-coeftest(fiscalstance_v1, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(fiscalstance_v1, vcov = "CR0", 
-                        cluster = dat$ccode, test = "naive-t")
-
-#with country-fixed effects and interaction PDebt * rminusg
-fiscalstance_v2 <- plm(primaryFB~lag(PDebt,1) + rminusg + lag(PDebt,1) * rminusg + outputgap + safety, index=c("ccode", "year"), model="within", effect="individual", data=dat)
-summary(fiscalstance_v2)
-coeftest(fiscalstance_v2, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(fiscalstance_v2, vcov = "CR0", 
-                        cluster = dat$ccode, test = "naive-t")
-
-#The primary fiscal balance is tighter when interest-growth differentials are higher, with the magnitude of tightening increasing with the initial debt level
-
-#euro sample
-fiscalstance_v2_Euro <- plm(primaryFB~lag(PDebt,1) + rminusg + lag(PDebt,1) * rminusg + outputgap + safety, index=c("ccode", "year"), model="within", effect="individual", data=dat_Euro)
-summary(fiscalstance_v2_Euro)
-coeftest(fiscalstance_v2_Euro, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(fiscalstance_v2_Euro, vcov = "CR0", 
-                        cluster = dat_Euro$ccode, test = "naive-t")
-
-#standalone sample
-fiscalstance_v2_standalone <- plm(primaryFB~lag(PDebt,1) + rminusg + lag(PDebt,1) * rminusg + outputgap + safety, index=c("ccode", "year"), model="within", effect="individual", data=dat_standalone)
-summary(fiscalstance_v2_standalone)
-coeftest(fiscalstance_v2_standalone, vcov.=function(x) vcovHC(x, type="sss"))
-
-clubSandwich::coef_test(fiscalstance_v2_standalone, vcov = "CR0", 
-                        cluster = dat_standalone$ccode, test = "naive-t")
-
-#for standalone countries, there is no significant relationship between higher r-g differentials and tighter primary balances. The interaction term with public debt also lacks significance in contrast to the estimate from the Euro sample, where we find evidence that the magnitude of tightening is increasing with higher public debt levels.
-
 #appendix
 
 #Explaining variation in LTrate
@@ -2324,7 +2044,6 @@ ses.LTrate_determinants_v5_3_year <- list(coeftest(LTrate_determinants_v5_3_year
 tvals.LTrate_determinants_v5_3_year <- list(coeftest(LTrate_determinants_v5_3_year, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
 pvals.LTrate_determinants_v5_3_year <- list(coeftest(LTrate_determinants_v5_3_year, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
 
-#Table A4
 #stargazer table for LaTEX
 stargazer(LTrate_determinants_v3, LTrate_determinants_v5, LTrate_determinants_v9, LTrate_determinants_v5_3_year, LTrate_determinants_v6, LTrate_determinants_v7, LTrate_determinants_v6_periphery, LTrate_determinants_v6_core, t=list(unlist(tvals.LTrate_determinants_v3), unlist(tvals.LTrate_determinants_v5), unlist(tvals.LTrate_determinants_v9), unlist(tvals.LTrate_determinants_v5_3_year), unlist(tvals.LTrate_determinants_v6), unlist(tvals.LTrate_determinants_v7), unlist(tvals.LTrate_determinants_v6_periphery), unlist(tvals.LTrate_determinants_v6_core)), se=list(unlist(ses.LTrate_determinants_v3), unlist(ses.LTrate_determinants_v5), unlist(ses.LTrate_determinants_v9), unlist(ses.LTrate_determinants_v5_3_year), unlist(ses.LTrate_determinants_v6), unlist(ses.LTrate_determinants_v7), unlist(ses.LTrate_determinants_v6_periphery), unlist(ses.LTrate_determinants_v6_core)), p=list(unlist(pvals.LTrate_determinants_v3), unlist(pvals.LTrate_determinants_v5), unlist(pvals.LTrate_determinants_v9), unlist(pvals.LTrate_determinants_v5_3_year), unlist(pvals.LTrate_determinants_v6), unlist(pvals.LTrate_determinants_v7), unlist(pvals.LTrate_determinants_v6_periphery), unlist(pvals.LTrate_determinants_v6_core)))
 
@@ -2447,13 +2166,8 @@ ses.GDP_growth_determinants_v5_3_year <- list(coeftest(GDP_growth_determinants_v
 tvals.GDP_growth_determinants_v5_3_year <- list(coeftest(GDP_growth_determinants_v5_3_year, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
 pvals.GDP_growth_determinants_v5_3_year <- list(coeftest(GDP_growth_determinants_v5_3_year, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
 
-#Table A5
 #stargazer table for LaTEX
 stargazer(GDP_growth_determinants_v3, GDP_growth_determinants_v5, GDP_growth_determinants_v9, GDP_growth_determinants_v5_3_year, GDP_growth_determinants_v6, GDP_growth_determinants_v7, GDP_growth_determinants_v6_periphery, GDP_growth_determinants_v6_core, t=list(unlist(tvals.GDP_growth_determinants_v3), unlist(tvals.GDP_growth_determinants_v5), unlist(tvals.GDP_growth_determinants_v9), unlist(tvals.GDP_growth_determinants_v5_3_year), unlist(tvals.GDP_growth_determinants_v6), unlist(tvals.GDP_growth_determinants_v7), unlist(tvals.GDP_growth_determinants_v6_periphery), unlist(tvals.GDP_growth_determinants_v6_core)), se=list(unlist(ses.GDP_growth_determinants_v3), unlist(ses.GDP_growth_determinants_v5), unlist(ses.GDP_growth_determinants_v9), unlist(ses.GDP_growth_determinants_v5_3_year), unlist(ses.GDP_growth_determinants_v6), unlist(ses.GDP_growth_determinants_v7), unlist(ses.GDP_growth_determinants_v6_periphery), unlist(ses.GDP_growth_determinants_v6_core)), p=list(unlist(pvals.GDP_growth_determinants_v3), unlist(pvals.GDP_growth_determinants_v5), unlist(pvals.GDP_growth_determinants_v9), unlist(pvals.GDP_growth_determinants_v5_3_year), unlist(pvals.GDP_growth_determinants_v6), unlist(pvals.GDP_growth_determinants_v7), unlist(pvals.GDP_growth_determinants_v6_periphery), unlist(pvals.GDP_growth_determinants_v6_core)))
-
-#fixed-effects panel regressions with risk spread to Germany instead of safety
-#with country-fixed effects
-#rg differential as dependent variable
 
 rg_determinants_v1_spread_Germany <- plm(rminusg_future5~ real_GDP_gr + real_LTrate + pop_growth, index=c("ccode", "year"), model="within", effect="individual", data=dat)
 summary(rg_determinants_v1_spread_Germany)
@@ -2509,22 +2223,13 @@ rg_determinants_v9_spread_Germany <- plm(rminusg_future5~ real_GDP_gr + real_LTr
 summary(rg_determinants_v9_spread_Germany)
 coeftest(rg_determinants_v9_spread_Germany, vcov.=function(x) vcovHC(x, type="sss"))
 
-#
-
-#exclude US
-#dat_exclude_US <- subset(dat, ccode %in% c('AUT', 'BEL', 'DEU', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
-
 rg_determinants_v10_spread_Germany <- plm(rminusg_future5~ real_GDP_gr + real_LTrate + pop_growth + PDebt + primaryFB + spread_Germany*EuroMember + spread_Germany*EuroCrisis + spread_Germany*StandaCrisis+ fin_open, index=c("ccode", "year"), model="within", effect="individual", data=dat_exclude_US)
 summary(rg_determinants_v10_spread_Germany)
 coeftest(rg_determinants_v10_spread_Germany, vcov.=function(x) vcovHC(x, type="sss"))
 
-#exclude Germany
-#dat_exclude_DEU <- subset(dat, ccode %in% c('AUT', 'BEL', 'USA', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
-
 rg_determinants_v11_spread_Germany <- plm(rminusg_future5~ real_GDP_gr + real_LTrate + pop_growth + PDebt + primaryFB + spread_Germany*EuroMember + spread_Germany*EuroCrisis + spread_Germany*StandaCrisis+ fin_open, index=c("ccode", "year"), model="within", effect="individual", data=dat_exclude_DEU)
 summary(rg_determinants_v11_spread_Germany)
 coeftest(rg_determinants_v11_spread_Germany, vcov.=function(x) vcovHC(x, type="sss"))
-
 
 #preparations for stargazer table
 ses.rg_determinants_v1_spread_Germany <- list(coeftest(rg_determinants_v1_spread_Germany, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
@@ -2574,59 +2279,7 @@ pvals.rg_determinants_v9_spread_Germany <- list(coeftest(rg_determinants_v9_spre
 #stargazer table for LaTEX
 stargazer(rg_determinants_v3_spread_Germany, rg_determinants_v4_spread_Germany, rg_determinants_v5_spread_Germany, rg_determinants_v6_spread_Germany, rg_determinants_v7_spread_Germany, rg_determinants_v6_periphery_spread_Germany, rg_determinants_v6_core_spread_Germany, t=list(unlist(tvals.rg_determinants_v3_spread_Germany), unlist(tvals.rg_determinants_v4_spread_Germany), unlist(tvals.rg_determinants_v5_spread_Germany), unlist(tvals.rg_determinants_v6_spread_Germany), unlist(tvals.rg_determinants_v7_spread_Germany), unlist(tvals.rg_determinants_v6_periphery_spread_Germany), unlist(tvals.rg_determinants_v6_core_spread_Germany)), se=list(unlist(ses.rg_determinants_v3_spread_Germany), unlist(ses.rg_determinants_v4_spread_Germany), unlist(ses.rg_determinants_v5_spread_Germany), unlist(ses.rg_determinants_v6_spread_Germany), unlist(ses.rg_determinants_v7_spread_Germany), unlist(ses.rg_determinants_v6_periphery_spread_Germany), unlist(ses.rg_determinants_v6_core_spread_Germany)), p=list(unlist(pvals.rg_determinants_v3_spread_Germany), unlist(pvals.rg_determinants_v4_spread_Germany), unlist(pvals.rg_determinants_v5_spread_Germany), unlist(pvals.rg_determinants_v6_spread_Germany), unlist(pvals.rg_determinants_v7_spread_Germany), unlist(pvals.rg_determinants_v6_periphery_spread_Germany), unlist(pvals.rg_determinants_v6_core_spread_Germany)))
 
-#Predictors of public-debt-to-GDP ratios
-#all countries
-PDebt_determinants_v1 <- plm(PDebt~ lag(rminusg) + inflation + lag(real_LTrate) + pop_growth + primaryFB + safety + fin_open + EuroCrisis + StandaCrisis, index=c("ccode", "year"), model="within", effect="individual", data=dat)
-summary(PDebt_determinants_v1)
-coeftest(PDebt_determinants_v1, vcov.=function(x) vcovHC(x, type="sss"))
-
-#Euro countries
-PDebt_determinants_v2 <- plm(PDebt~ lag(rminusg) + inflation + lag(real_LTrate) + pop_growth + primaryFB + safety + fin_open + EuroCrisis, index=c("ccode", "year"), model="within", effect="individual", data=dat_Euro)
-summary(PDebt_determinants_v2)
-coeftest(PDebt_determinants_v2, vcov.=function(x) vcovHC(x, type="sss"))
-
-#stand-alone countries
-PDebt_determinants_v3 <- plm(PDebt~ lag(rminusg) + inflation + lag(real_LTrate) + pop_growth + primaryFB + safety + fin_open + StandaCrisis, index=c("ccode", "year"), model="within", effect="individual", data=dat_standalone)
-summary(PDebt_determinants_v3)
-coeftest(PDebt_determinants_v3, vcov.=function(x) vcovHC(x, type="sss"))
-
-#Euro periphery countries
-PDebt_determinants_v4 <- plm(PDebt~ lag(rminusg) + inflation + lag(real_LTrate) + pop_growth + primaryFB + safety + fin_open + EuroCrisis, index=c("ccode", "year"), model="within", effect="individual", data=dat_Euro_periphery)
-summary(PDebt_determinants_v4)
-coeftest(PDebt_determinants_v4, vcov.=function(x) vcovHC(x, type="sss"))
-
-#Euro core countries
-PDebt_determinants_v5 <- plm(PDebt~ lag(rminusg) + inflation + lag(real_LTrate) + pop_growth + primaryFB + safety + fin_open + EuroCrisis, index=c("ccode", "year"), model="within", effect="individual", data=dat_Euro_core)
-summary(PDebt_determinants_v5)
-coeftest(PDebt_determinants_v5, vcov.=function(x) vcovHC(x, type="sss"))
-
-#preparations for stargazer table
-ses.PDebt_determinants_v1 <- list(coeftest(PDebt_determinants_v1, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
-tvals.PDebt_determinants_v1 <- list(coeftest(PDebt_determinants_v1, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.PDebt_determinants_v1 <- list(coeftest(PDebt_determinants_v1, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
-
-ses.PDebt_determinants_v2 <- list(coeftest(PDebt_determinants_v2, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
-tvals.PDebt_determinants_v2 <- list(coeftest(PDebt_determinants_v2, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.PDebt_determinants_v2 <- list(coeftest(PDebt_determinants_v2, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
-
-ses.PDebt_determinants_v3 <- list(coeftest(PDebt_determinants_v3, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
-tvals.PDebt_determinants_v3 <- list(coeftest(PDebt_determinants_v3, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.PDebt_determinants_v3 <- list(coeftest(PDebt_determinants_v3, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
-
-ses.PDebt_determinants_v4 <- list(coeftest(PDebt_determinants_v4, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
-tvals.PDebt_determinants_v4 <- list(coeftest(PDebt_determinants_v4, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.PDebt_determinants_v4 <- list(coeftest(PDebt_determinants_v4, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
-
-ses.PDebt_determinants_v5 <- list(coeftest(PDebt_determinants_v5, vcov.=function(x) vcovHC(x, type="sss"))[,2]) #heteroskedasticity-robust standard errors
-tvals.PDebt_determinants_v5 <- list(coeftest(PDebt_determinants_v5, vcov.=function(x) vcovHC(x, type="sss"))[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
-pvals.PDebt_determinants_v5 <- list(coeftest(PDebt_determinants_v5, vcov.=function(x) vcovHC(x, type="sss"))[,4]) # heteroskedasticity-robust p-val
-
-stargazer(PDebt_determinants_v1, PDebt_determinants_v2, PDebt_determinants_v3, PDebt_determinants_v4, PDebt_determinants_v5, t=list(unlist(tvals.PDebt_determinants_v1), unlist(tvals.PDebt_determinants_v2), unlist(tvals.PDebt_determinants_v3), unlist(tvals.PDebt_determinants_v4), unlist(tvals.PDebt_determinants_v5)), se=list(unlist(ses.PDebt_determinants_v1), unlist(ses.PDebt_determinants_v2), unlist(ses.PDebt_determinants_v3), unlist(ses.PDebt_determinants_v4), unlist(ses.PDebt_determinants_v5)), p=list(unlist(pvals.PDebt_determinants_v1), unlist(pvals.PDebt_determinants_v2), unlist(pvals.PDebt_determinants_v3), unlist(pvals.PDebt_determinants_v4), unlist(pvals.PDebt_determinants_v5)))
-
 #robustness check: US as safety benchmark for stand-alone countries
-#Explaining variation in r-g
-#with country-fixed effects
-#rg differential as dependent variable
 rg_determinants_v1_benchmark <- plm(rminusg~ inflation + real_LTrate + pop_growth, index=c("ccode", "year"), model="within", effect="individual", data=dat)
 summary(rg_determinants_v1_benchmark)
 coeftest(rg_determinants_v1_benchmark, vcov.=function(x) vcovHC(x, type="sss"))
@@ -2752,9 +2405,6 @@ pvals.rg_determinants_v5_3_year_benchmark <- list(coeftest(rg_determinants_v5_3_
 stargazer(rg_determinants_v3_benchmark, rg_determinants_v5_benchmark, rg_determinants_v9_benchmark, rg_determinants_v5_3_year_benchmark, rg_determinants_v6_benchmark, rg_determinants_v7_benchmark, rg_determinants_v6_periphery_benchmark, rg_determinants_v6_core_benchmark, t=list(unlist(tvals.rg_determinants_v3_benchmark), unlist(tvals.rg_determinants_v5_benchmark), unlist(tvals.rg_determinants_v9_benchmark), unlist(tvals.rg_determinants_v5_3_year_benchmark), unlist(tvals.rg_determinants_v6_benchmark), unlist(tvals.rg_determinants_v7_benchmark), unlist(tvals.rg_determinants_v6_periphery_benchmark), unlist(tvals.rg_determinants_v6_core_benchmark)), se=list(unlist(ses.rg_determinants_v3_benchmark), unlist(ses.rg_determinants_v5_benchmark), unlist(ses.rg_determinants_v9_benchmark), unlist(ses.rg_determinants_v5_3_year_benchmark), unlist(ses.rg_determinants_v6_benchmark), unlist(ses.rg_determinants_v7_benchmark), unlist(ses.rg_determinants_v6_periphery_benchmark), unlist(ses.rg_determinants_v6_core_benchmark)), p=list(unlist(pvals.rg_determinants_v3_benchmark), unlist(pvals.rg_determinants_v5_benchmark), unlist(pvals.rg_determinants_v9_benchmark), unlist(pvals.rg_determinants_v5_3_year_benchmark), unlist(pvals.rg_determinants_v6_benchmark), unlist(pvals.rg_determinants_v7_benchmark), unlist(pvals.rg_determinants_v6_periphery_benchmark), unlist(pvals.rg_determinants_v6_core_benchmark)))
 
 #robustness check: US as safety benchmark for stand-alone countries
-#Explaining variation in r-g
-#with country-fixed effects
-#rg differential as dependent variable
 rg_determinants_v1_benchmark <- plm(rminusg~ inflation + real_LTrate + pop_growth, index=c("ccode", "year"), model="within", effect="individual", data=dat)
 summary(rg_determinants_v1_benchmark)
 coeftest(rg_determinants_v1_benchmark, vcov.=function(x) vcovHC(x, type="sss"))
@@ -2809,15 +2459,9 @@ rg_determinants_v9_benchmark <- plm(rminusg~ inflation + lag(real_LTrate, 1) + p
 summary(rg_determinants_v9_benchmark)
 coeftest(rg_determinants_v9_benchmark, vcov.=function(x) vcovHC(x, type="sss"))
 
-#exclude US
-#dat_exclude_US <- subset(dat, ccode %in% c('AUT', 'BEL', 'DEU', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
-
 rg_determinants_v10_benchmark <- plm(rminusg~ inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 1) + primaryFB + safe_benchmark*EuroMember + safe_benchmark*EuroCrisis + safe_benchmark*StandaCrisis+ fin_open, index=c("ccode", "year"), model="within", effect="individual", data=dat_exclude_US)
 summary(rg_determinants_v10_benchmark)
 coeftest(rg_determinants_v10_benchmark, vcov.=function(x) vcovHC(x, type="sss"))
-
-#exclude Germany
-#dat_exclude_DEU <- subset(dat, ccode %in% c('AUT', 'BEL', 'USA', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
 
 rg_determinants_v11_benchmark <- plm(rminusg~ inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 1) + primaryFB + safe_benchmark*EuroMember + safe_benchmark*EuroCrisis + safe_benchmark*StandaCrisis+ fin_open, index=c("ccode", "year"), model="within", effect="individual", data=dat_exclude_DEU)
 summary(rg_determinants_v11_benchmark)
@@ -2923,7 +2567,6 @@ coeftest(rg_determinants_v5_instrument, vcov.=vcovHAC(rg_determinants_v5_instrum
 
 coef_test(rg_determinants_v5_instrument, vcov = "CR0", cluster = dat$ccode, test = "naive-t")
 
-
 #Euro
 rg_determinants_v6_instrument <- plm(rminusg ~ lag(PDebt, 1) + inflation + lag(real_LTrate, 1) + pop_growth + primaryFB + fin_open + safety*EuroMember + safety*EuroCrisis + factor(ccode) | PDebt_instrument + inflation + lag(real_LTrate, 1) + pop_growth + primaryFB + fin_open + safety*EuroMember + safety*EuroCrisis + factor(ccode), index=c("ccode", "year"), model="within", effect="individual", data=dat_Euro)
 summary(rg_determinants_v6_instrument)
@@ -2976,10 +2619,6 @@ summary(rg_determinants_v9_instrument, vcov = sandwich)
 summary(rg_determinants_v9_instrument, vcov = sandwich, df = Inf, diagnostics = TRUE)
 coeftest(rg_determinants_v9_instrument, vcov.=vcovHAC(rg_determinants_v9_instrument))
 
-#coef_test(rg_determinants_v9_instrument, vcov = "CR0", cluster = dat_exclude_US_DEU_5_year$ccode, test = "naive-t")
-
-
-#
 rg_determinants_v5_3_year_instrument <- ivreg(rminusg~ lag(PDebt,1) + inflation + lag(real_LTrate, 1) + pop_growth + primaryFB + fin_open + safety*EuroMember + safety*EuroCrisis + safety*StandaCrisis + factor(ccode) | PDebt_instrument + inflation + lag(real_LTrate, 1) + pop_growth + primaryFB + fin_open + safety*EuroMember + safety*EuroCrisis + safety*StandaCrisis + factor(ccode), data=pdata_3_year)
 summary(rg_determinants_v5_3_year_instrument)
 #weak instrument test
@@ -2989,7 +2628,6 @@ coeftest(rg_determinants_v5_3_year_instrument, vcov.=vcovHAC(rg_determinants_v5_
 
 coef_test(rg_determinants_v5_3_year_instrument, vcov = "CR0", cluster = pdata_3_year$ccode, test = "naive-t")
 
-#preparations for stargazer table
 #preparation for stargazer tables
 ses.rg_determinants_v2_instrument <- list(coef_test(rg_determinants_v2_instrument, vcov = "CR0", cluster = dat$ccode, test = "naive-t")[,2]) #heteroskedasticity-robust standard errors
 tvals.rg_determinants_v2_instrument <- list(coef_test(rg_determinants_v2_instrument, vcov = "CR0", cluster = dat$ccode, test = "naive-t")[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
@@ -3031,19 +2669,14 @@ ses.rg_determinants_v5_3_year_instrument <- list(coef_test(rg_determinants_v5_3_
 tvals.rg_determinants_v5_3_year_instrument <- list(coef_test(rg_determinants_v5_3_year_instrument, vcov = "CR0", cluster = pdata_3_year$ccode, test = "naive-t")[,3]) #heteroskedasticity-robust t-values "group" ("time") accounts for serial (cross-sectional) correlation.
 pvals.rg_determinants_v5_3_year_instrument <- list(coef_test(rg_determinants_v5_3_year_instrument, vcov = "CR0", cluster = pdata_3_year$ccode, test = "naive-t")[,4]) # heteroskedasticity-robust p-val
 
-#Table A7
 #stargazer table for LaTEX
 stargazer(rg_determinants_v3_instrument, rg_determinants_v5_instrument, rg_determinants_v9_instrument, rg_determinants_v5_3_year_instrument, rg_determinants_v6_instrument, rg_determinants_v7_instrument, rg_determinants_v6_periphery_instrument, rg_determinants_v6_core_instrument, t=list(unlist(tvals.rg_determinants_v3_instrument), unlist(tvals.rg_determinants_v5_instrument), unlist(tvals.rg_determinants_v9_instrument), unlist(tvals.rg_determinants_v5_3_year_instrument), unlist(tvals.rg_determinants_v6_instrument), unlist(tvals.rg_determinants_v7_instrument), unlist(tvals.rg_determinants_v6_periphery_instrument), unlist(tvals.rg_determinants_v6_core_instrument)), se=list(unlist(ses.rg_determinants_v3_instrument), unlist(ses.rg_determinants_v5_instrument), unlist(ses.rg_determinants_v9_instrument), unlist(ses.rg_determinants_v5_3_year_instrument), unlist(ses.rg_determinants_v6_instrument), unlist(ses.rg_determinants_v7_instrument), unlist(ses.rg_determinants_v6_periphery_instrument), unlist(ses.rg_determinants_v6_core_instrument)), p=list(unlist(pvals.rg_determinants_v3_instrument), unlist(pvals.rg_determinants_v5_instrument), unlist(pvals.rg_determinants_v9_instrument), unlist(pvals.rg_determinants_v5_3_year_instrument), unlist(pvals.rg_determinants_v6_instrument), unlist(pvals.rg_determinants_v7_instrument), unlist(pvals.rg_determinants_v6_periphery_instrument), unlist(pvals.rg_determinants_v6_core_instrument)))
 
+#GMM
 #+safe haven, GDP size and financial openness
 rg_determinants_v3_GMM <- pgmm(rminusg~ lag(rminusg) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 1) + primaryFB + safety + fin_open | lag(rminusg,2) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 2) + primaryFB + safety + fin_open, index=c("ccode", "year"), effect="individual", model="onestep", transformation="ld", data=dat)
 summary(rg_determinants_v3_GMM)
 coeftest(rg_determinants_v3_GMM, vcov.=function(x) vcovHC(x, type="sss"))
-
-#Test for autocorrelation
-mtest(rg_determinants_v3_GMM, order = 2L)
-#Test for instrument validity
-plm::sargan(rg_determinants_v3_GMM)
 
 #+interaction safe_haven*EuroMember
 rg_determinants_v4_GMM <- pgmm(rminusg~ lag(rminusg) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 1) + primaryFB + safety*EuroMember + fin_open | lag(rminusg,2) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 2) + primaryFB + safety*EuroMember + fin_open, index=c("ccode", "year"), effect="individual", model="onestep", transformation="ld", data=dat)
@@ -3093,9 +2726,6 @@ rg_determinants_v10_GMM <- pgmm(rminusg~ lag(rminusg) + inflation + lag(real_LTr
 summary(rg_determinants_v10_GMM)
 coeftest(rg_determinants_v10_GMM, vcov.=function(x) vcovHC(x, type="sss"))
 
-#exclude Germany
-#dat_exclude_DEU <- subset(dat, ccode %in% c('AUT', 'BEL', 'USA', 'ESP', 'FIN', 'FRA', 'GRC', 'IRL', 'ITA', 'NLD', 'PRT', 'AUS', 'CAN', 'CHE', 'DNK', 'GBR', 'JPN', 'KOR', 'NOR', 'NZL', 'SWE'))
-
 rg_determinants_v11_GMM <- pgmm(rminusg~ lag(rminusg) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 1) + primaryFB + safety*EuroMember + safety*EuroCrisis + safety*StandaCrisis+ fin_open | lag(rminusg,1) + inflation + lag(real_LTrate, 1) + pop_growth + lag(PDebt, 2) + primaryFB + fin_open + safety*EuroMember + safety*EuroCrisis + safety*StandaCrisis, index=c("ccode", "year"), effect="individual", model="onestep", transformation="ld", data=dat_exclude_DEU)
 summary(rg_determinants_v11_GMM)
 coeftest(rg_determinants_v11_GMM, vcov.=function(x) vcovHC(x, type="sss"))
@@ -3131,10 +2761,4 @@ pvals.rg_determinants_v9_GMM <- list(coeftest(rg_determinants_v9_GMM, vcov.=func
 
 #stargazer table for LaTEX
 stargazer(rg_determinants_v3_GMM, rg_determinants_v5_GMM, rg_determinants_v9_GMM,rg_determinants_v6_GMM, rg_determinants_v7_GMM, t=list(unlist(tvals.rg_determinants_v3_GMM), unlist(tvals.rg_determinants_v5_GMM), unlist(tvals.rg_determinants_v9_GMM), unlist(tvals.rg_determinants_v6_GMM), unlist(tvals.rg_determinants_v7_GMM)), se=list(unlist(ses.rg_determinants_v3_GMM), unlist(ses.rg_determinants_v5_GMM), unlist(ses.rg_determinants_v9_GMM), unlist(ses.rg_determinants_v6_GMM), unlist(ses.rg_determinants_v7_GMM)), p=list(unlist(pvals.rg_determinants_v3_GMM), unlist(pvals.rg_determinants_v5_GMM), unlist(pvals.rg_determinants_v9_GMM), unlist(pvals.rg_determinants_v6_GMM), unlist(pvals.rg_determinants_v7_GMM)))
-
-#stargazer(rg_determinants_v3_GMM, rg_determinants_v5_GMM, rg_determinants_v9_GMM, rg_determinants_v5_3_year_GMM, rg_determinants_v6_GMM, rg_determinants_v7_GMM, rg_determinants_v6_periphery_GMM, rg_determinants_v6_core_GMM, t=list(unlist(tvals.rg_determinants_v3_GMM), unlist(tvals.rg_determinants_v5_GMM), unlist(tvals.rg_determinants_v9_GMM), unlist(tvals.rg_determinants_v5_3_year_GMM), unlist(tvals.rg_determinants_v6_GMM), unlist(tvals.rg_determinants_v7_GMM), unlist(tvals.rg_determinants_v6_periphery_GMM), unlist(tvals.rg_determinants_v6_core_GMM)), se=list(unlist(ses.rg_determinants_v3_GMM), unlist(ses.rg_determinants_v5_GMM), unlist(ses.rg_determinants_v9_GMM), unlist(ses.rg_determinants_v5_3_year_GMM), unlist(ses.rg_determinants_v6_GMM), unlist(ses.rg_determinants_v7_GMM), unlist(ses.rg_determinants_v6_periphery_GMM), unlist(ses.rg_determinants_v6_core_GMM)), p=list(unlist(pvals.rg_determinants_v3_GMM), unlist(pvals.rg_determinants_v5_GMM), unlist(pvals.rg_determinants_v9_GMM), unlist(pvals.rg_determinants_v5_3_year_GMM), unlist(pvals.rg_determinants_v6_GMM), unlist(pvals.rg_determinants_v7_GMM), unlist(pvals.rg_determinants_v6_periphery_GMM), unlist(pvals.rg_determinants_v6_core_GMM)))
-
-
-#stargazer(rg_determinants_v3, rg_determinants_v5, rg_determinants_v9, rg_determinants_v5_3_year, rg_determinants_v6, rg_determinants_v7, rg_determinants_v6_periphery, rg_determinants_v6_core, t=list(unlist(tvals.rg_determinants_v3), unlist(tvals.rg_determinants_v5), unlist(tvals.rg_determinants_v9), unlist(tvals.rg_determinants_v5_3_year), unlist(tvals.rg_determinants_v6), unlist(tvals.rg_determinants_v7), unlist(tvals.rg_determinants_v6_periphery), unlist(tvals.rg_determinants_v6_core)), se=list(unlist(ses.rg_determinants_v3), unlist(ses.rg_determinants_v5), unlist(ses.rg_determinants_v9), unlist(ses.rg_determinants_v5_3_year), unlist(ses.rg_determinants_v6), unlist(ses.rg_determinants_v7), unlist(ses.rg_determinants_v6_periphery), unlist(ses.rg_determinants_v6_core)), p=list(unlist(pvals.rg_determinants_v3), unlist(pvals.rg_determinants_v5), unlist(pvals.rg_determinants_v9), unlist(pvals.rg_determinants_v5_3_year), unlist(pvals.rg_determinants_v6), unlist(pvals.rg_determinants_v7), unlist(pvals.rg_determinants_v6_periphery), unlist(pvals.rg_determinants_v6_core)))
-
 
